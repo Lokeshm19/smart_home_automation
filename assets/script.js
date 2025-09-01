@@ -1,28 +1,25 @@
 // =====================
 // Loki Home • app.js
-// Modular control script
+// Modular control script with bi-directional sync
 // =====================
 
 // ----- MQTT Setup -----
-// Replace with your HiveMQ Cloud cluster details
 const brokerUrl = "wss://0d10497a97ea4359bf376f755d59da27.s1.eu.hivemq.cloud:8884/mqtt";
 
-// Use the username & password you created in HiveMQ Cloud console
 const options = {
   username: "lokeshm19",
   password: "Lokesh@19",
-  clean: true,   // start with a fresh session
-  reconnectPeriod: 1000, // auto reconnect (ms)
-  connectTimeout: 30 * 1000, // 30 seconds
+  clean: true,
+  reconnectPeriod: 1000,
+  connectTimeout: 30 * 1000,
 };
 
-// Connect
 const client = mqtt.connect(brokerUrl, options);
 
 client.on("connect", () => {
   logEvent("System", "✅ Connected to HiveMQ Cloud");
   document.getElementById("connStatus").textContent = "Online";
-  client.subscribe("#"); // subscribe all for demo
+  client.subscribe("#"); // Subscribe all topics for sync
 });
 
 client.on("error", (err) => {
@@ -35,8 +32,33 @@ client.on("close", () => {
   document.getElementById("connStatus").textContent = "Offline";
 });
 
+// --------- Handle incoming messages (SYNC UI) ---------
 client.on("message", (topic, message) => {
-  logEvent("MQTT", `${topic}`, message.toString());
+  const payload = message.toString();
+  logEvent("MQTT", `${topic}`, payload);
+
+  // ---- Door Sync ----
+  if (topic === "door/state") {
+    if (payload === "LOCKED") {
+      document.getElementById("doorPill").textContent = "Locked";
+      document.getElementById("doorPill").className = "pill locked";
+    } else if (payload === "UNLOCKED") {
+      document.getElementById("doorPill").textContent = "Unlocked";
+      document.getElementById("doorPill").className = "pill unlocked";
+    }
+  }
+
+  // ---- Room Switch Sync ----
+  document.querySelectorAll(".switch input").forEach(input => {
+    if (topic === input.dataset.toggle + "/state") {
+      input.checked = (payload.toUpperCase() === "ON");
+    }
+  });
+
+  // ---- Mode Sync ----
+  if (topic === "mode/state") {
+    document.getElementById("modeHint").textContent = `Current: ${payload}`;
+  }
 });
 
 // Utility: log actions
@@ -54,6 +76,7 @@ function logEvent(event, detail, extra = "") {
 // =====================
 function lockDoor() {
   client.publish("door/command", "LOCK");
+  client.publish("door/state", "LOCKED"); // broadcast state
   document.getElementById("doorPill").textContent = "Locked";
   document.getElementById("doorPill").className = "pill locked";
   logEvent("Door", "Locked");
@@ -61,6 +84,7 @@ function lockDoor() {
 
 function unlockDoor() {
   client.publish("door/command", "UNLOCK");
+  client.publish("door/state", "UNLOCKED"); // broadcast state
   document.getElementById("doorPill").textContent = "Unlocked";
   document.getElementById("doorPill").className = "pill unlocked";
   logEvent("Door", "Unlocked");
@@ -75,7 +99,6 @@ document.querySelector("[data-value='UNLOCK']").onclick = unlockDoor;
 // =====================
 document.getElementById("sendOtp").onclick = () => {
   const mobile = "6360435917";
-  // NOTE: needs backend for real SMS
   const otp = Math.floor(100000 + Math.random() * 900000);
   document.getElementById("otpResult").textContent = `OTP sent to ${mobile}: ${otp}`;
   logEvent("OTP", "Sent to", mobile);
@@ -87,12 +110,10 @@ document.getElementById("sendOtp").onclick = () => {
 document.querySelectorAll(".switch input").forEach(input => {
   input.addEventListener("change", e => {
     const topic = e.target.dataset.toggle;
-    const room = topic.split("/")[0];
-    const device = topic.split("/")[1];
-    const state = e.target.checked ? "on" : "off";
-    const payload = `${room}_${device}_${state}`;
-    client.publish(topic, state.toUpperCase());
-    logEvent("Room", `${room} ${device}`, state);
+    const state = e.target.checked ? "ON" : "OFF";
+    client.publish(topic, state);
+    client.publish(topic + "/state", state); // broadcast sync
+    logEvent("Room", topic, state);
   });
 });
 
@@ -101,6 +122,7 @@ document.querySelectorAll(".switch input").forEach(input => {
 // =====================
 function setMode(mode) {
   document.getElementById("modeHint").textContent = `Current: ${mode}`;
+  client.publish("mode/state", mode); // broadcast mode
   logEvent("Mode", "Set to", mode);
 
   if (mode === "panic") {
@@ -108,6 +130,7 @@ function setMode(mode) {
     document.querySelectorAll(".switch input").forEach(i => {
       i.checked = false;
       client.publish(i.dataset.toggle, "OFF");
+      client.publish(i.dataset.toggle + "/state", "OFF");
     });
     logEvent("Mode", "Panic executed", "All devices OFF");
   }
@@ -146,7 +169,6 @@ setInterval(() => {
   document.getElementById("current").textContent = current;
   document.getElementById("power").textContent = power;
 
-  // Update chart
   let time = new Date().toLocaleTimeString();
   usageChart.data.labels.push(time);
   usageChart.data.datasets[0].data.push(power);
