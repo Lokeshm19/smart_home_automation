@@ -73,7 +73,8 @@ function logEvent(event, detail, extra = "") {
 // =====================
 function lockDoor() {
   client.publish("door/command", "LOCK");
-  client.publish("door/state", "LOCKED"); // broadcast state
+  client.publish("door/state", "LOCKED", { retain: true });
+// broadcast state
   document.getElementById("doorPill").textContent = "Locked";
   document.getElementById("doorPill").className = "pill locked";
   logEvent("Door", "Locked");
@@ -110,7 +111,8 @@ document.querySelectorAll(".switch input").forEach(input => {
 
     // publish command + broadcast state
     client.publish(topic, state);
-    client.publish(topic + "/state", state);
+    client.publish(topic + "/state", state, { retain: true });
+
 
     logEvent("Room", `${topic}`, state);
   });
