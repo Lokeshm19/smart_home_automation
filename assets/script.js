@@ -1,6 +1,6 @@
 // =====================
 // Loki Home • app.js
-// Modular control script with bi-directional sync
+// Modular control script
 // =====================
 
 // ----- MQTT Setup -----
@@ -19,7 +19,7 @@ const client = mqtt.connect(brokerUrl, options);
 client.on("connect", () => {
   logEvent("System", "✅ Connected to HiveMQ Cloud");
   document.getElementById("connStatus").textContent = "Online";
-  client.subscribe("#"); // Subscribe all topics for sync
+  client.subscribe("#"); // subscribe to all topics for demo
 });
 
 client.on("error", (err) => {
@@ -32,12 +32,21 @@ client.on("close", () => {
   document.getElementById("connStatus").textContent = "Offline";
 });
 
-// --------- Handle incoming messages (SYNC UI) ---------
 client.on("message", (topic, message) => {
   const payload = message.toString();
-  logEvent("MQTT", `${topic}`, payload);
+  logEvent("MQTT", topic, payload);
 
-  // ---- Door Sync ----
+  // --- Sync Switch States ---
+  document.querySelectorAll(".switch input").forEach(input => {
+    if (topic === input.dataset.toggle + "/state") {
+      const isOn = (payload.toUpperCase() === "ON");
+      if (input.checked !== isOn) {
+        input.checked = isOn;
+      }
+    }
+  });
+
+  // --- Sync Door State ---
   if (topic === "door/state") {
     if (payload === "LOCKED") {
       document.getElementById("doorPill").textContent = "Locked";
@@ -46,18 +55,6 @@ client.on("message", (topic, message) => {
       document.getElementById("doorPill").textContent = "Unlocked";
       document.getElementById("doorPill").className = "pill unlocked";
     }
-  }
-
-  // ---- Room Switch Sync ----
-  document.querySelectorAll(".switch input").forEach(input => {
-    if (topic === input.dataset.toggle + "/state") {
-      input.checked = (payload.toUpperCase() === "ON");
-    }
-  });
-
-  // ---- Mode Sync ----
-  if (topic === "mode/state") {
-    document.getElementById("modeHint").textContent = `Current: ${payload}`;
   }
 });
 
@@ -90,7 +87,6 @@ function unlockDoor() {
   logEvent("Door", "Unlocked");
 }
 
-// Attach listeners
 document.querySelector("[data-value='LOCK']").onclick = lockDoor;
 document.querySelector("[data-value='UNLOCK']").onclick = unlockDoor;
 
@@ -105,15 +101,18 @@ document.getElementById("sendOtp").onclick = () => {
 };
 
 // =====================
-// 3. Rooms Control
+// 3. Rooms Control (Switch Sync)
 // =====================
 document.querySelectorAll(".switch input").forEach(input => {
   input.addEventListener("change", e => {
     const topic = e.target.dataset.toggle;
     const state = e.target.checked ? "ON" : "OFF";
+
+    // publish command + broadcast state
     client.publish(topic, state);
-    client.publish(topic + "/state", state); // broadcast sync
-    logEvent("Room", topic, state);
+    client.publish(topic + "/state", state);
+
+    logEvent("Room", `${topic}`, state);
   });
 });
 
@@ -122,11 +121,9 @@ document.querySelectorAll(".switch input").forEach(input => {
 // =====================
 function setMode(mode) {
   document.getElementById("modeHint").textContent = `Current: ${mode}`;
-  client.publish("mode/state", mode); // broadcast mode
   logEvent("Mode", "Set to", mode);
 
   if (mode === "panic") {
-    // turn off all lights & fans
     document.querySelectorAll(".switch input").forEach(i => {
       i.checked = false;
       client.publish(i.dataset.toggle, "OFF");
@@ -140,7 +137,6 @@ document.querySelectorAll(".chip").forEach(btn => {
   btn.addEventListener("click", () => setMode(btn.dataset.mode));
 });
 
-// Schedule Save
 document.getElementById("saveSchedule").onclick = () => {
   const time = document.getElementById("modeStart").value;
   const temp = document.getElementById("autoOffTemp").value;
@@ -159,7 +155,6 @@ let usageChart = new Chart(chartCtx, {
   }
 });
 
-// Demo: simulate incoming data
 setInterval(() => {
   const voltage = (220 + Math.random() * 10).toFixed(1);
   const current = (Math.random() * 10).toFixed(2);
