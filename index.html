@@ -13,12 +13,11 @@
   <script defer src="assets/script.js"></script>
 </head>
 
-
-
 <body>
   <div class="app">
 
-    <!-- HEADER -->
+    <!-- ===================== START HEADER ===================== -->
+    <!-- This block handles branding, connection status, clock & weather -->
     <header class="topbar">
       <div class="brand">
         <div class="leaf"></div>
@@ -30,15 +29,18 @@
         <div class="weather" id="weather">Weather: —</div>
       </div>
     </header>
+    <!-- ===================== END HEADER ===================== -->
 
-    <!-- MAIN DASHBOARD -->
+
+    <!-- ===================== START MAIN DASHBOARD ===================== -->
     <main class="grid">
 
-      <!-- Door & Security -->
+      <!-- ===================== START DOOR & SECURITY ===================== -->
+      <!-- Manages lock/unlock, RFID status, and OTP fallback access -->
       <section class="card">
         <h3>🚪 Door & Security</h3>
 
-        <!-- Status -->
+        <!-- Door lock status & controls -->
         <div class="row">
           <div>
             <div class="label">Door Status</div>
@@ -50,13 +52,13 @@
           </div>
         </div>
 
-        <!-- RFID -->
+        <!-- RFID Authentication -->
         <div class="rfid">
           <div class="label">RFID Access</div>
           <div class="rfid-result" id="rfidResult">Waiting for tag…</div>
         </div>
 
-        <!-- OTP Fallback -->
+        <!-- OTP fallback authentication -->
         <div class="otp-fallback">
           <div class="label">OTP Fallback (if RFID fails)</div>
           <div class="otp-row">
@@ -65,8 +67,11 @@
           <div class="otp-result" id="otpResult">Enter OTP only if RFID fails.</div>
         </div>
       </section>
+      <!-- ===================== END DOOR & SECURITY ===================== -->
 
-      <!-- Rooms -->
+
+      <!-- ===================== START ROOMS & CONTROL ===================== -->
+      <!-- Controls lights and fans in different rooms -->
       <section class="card">
         <h3>🏡 Rooms Control</h3>
         <div class="rooms">
@@ -130,11 +135,13 @@
               <span class="switch-label">Fan</span>
             </label>
           </div>
-
         </div>
       </section>
+      <!-- ===================== END ROOMS & CONTROL ===================== -->
 
-      <!-- Modes + Schedules -->
+
+      <!-- ===================== START MODES & SCHEDULE ===================== -->
+      <!-- Switch between Day/Away/Night/Panic modes and set schedules -->
       <section class="card">
         <h3>🕹️ Modes + Schedules</h3>
         <div class="modes">
@@ -154,8 +161,11 @@
           <div class="hint" id="modeHint">Current: —</div>
         </div>
       </section>
+      <!-- ===================== END MODES & SCHEDULE ===================== -->
 
-      <!-- Power Monitor -->
+
+      <!-- ===================== START POWER MONITOR ===================== -->
+      <!-- Displays voltage, current, power usage, bill estimation & graph -->
       <section class="card">
         <h3>⚡ Power Monitor</h3>
         <div class="power-grid">
@@ -190,8 +200,11 @@
         </div>
         <canvas id="usageChart" height="120"></canvas>
       </section>
+      <!-- ===================== END POWER MONITOR ===================== -->
 
-      <!-- Logs -->
+
+      <!-- ===================== START USER LOGS ===================== -->
+      <!-- Shows events, allows exporting or clearing logs -->
       <section class="card full">
         <h3>📝 Usage Log</h3>
         <div class="log-controls">
@@ -211,13 +224,20 @@
           </table>
         </div>
       </section>
-    </main>
+      <!-- ===================== END USER LOGS ===================== -->
 
-    <!-- FOOTER -->
+    </main>
+    <!-- ===================== END MAIN DASHBOARD ===================== -->
+
+
+    <!-- ===================== START FOOTER ===================== -->
+    <!-- Displays MQTT broker info and live temperature -->
     <footer>
       <span>MQTT: <code id="brokerLabel">wss://broker.hivemq.com:8884/mqtt</code></span>
       <span>Temp: <code id="liveTemp">—</code> °C</span>
     </footer>
+    <!-- ===================== END FOOTER ===================== -->
+
   </div>
 </body>
 </html>
